@@ -1,7 +1,13 @@
 package Controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import java.util.List;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import Model.Account;
+import Model.Message;
+import Service.SocialMediaService;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 
@@ -13,8 +19,10 @@ import io.javalin.http.Context;
  * controller may be built.
  */
 public class SocialMediaController {
+    SocialMediaService socialMediaService;
 
     public SocialMediaController() {
+        this.socialMediaService = new SocialMediaService();
     }
 
     /**
@@ -66,7 +74,16 @@ public class SocialMediaController {
      * 
      * @param ctx
      */
-    private void registerHandler(Context ctx) {
+    private void registerHandler(Context ctx) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        Account account = mapper.readValue(ctx.body(), Account.class);
+        Account registeredAccount = socialMediaService.register(account.getUsername(), account.getPassword());
+
+        if (registeredAccount != null) {
+            ctx.json(mapper.writeValueAsString(registeredAccount));
+        } else {
+            ctx.status(400);
+        }
     }
 
     /**
@@ -87,7 +104,16 @@ public class SocialMediaController {
      * @param ctx
      * 
      */
-    private void loginHandler(Context ctx) {
+    private void loginHandler(Context ctx) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        Account account = mapper.readValue(ctx.body(), Account.class);
+        Account loggedInAccount = socialMediaService.login(account.getUsername(), account.getPassword());
+
+        if (loggedInAccount != null) {
+            ctx.json(loggedInAccount);
+        } else {
+            ctx.status(401);
+        }
     }
 
     /**
@@ -107,7 +133,16 @@ public class SocialMediaController {
      * 
      * @param ctx
      */
-    private void postMessagesHandler(Context ctx) {
+    private void postMessagesHandler(Context ctx) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        Message message = mapper.readValue(ctx.body(), Message.class);
+        Message createdMessage = socialMediaService.createMessage(message);
+
+        if (createdMessage != null) {
+            ctx.json(mapper.writeValueAsString(createdMessage));
+        } else {
+            ctx.status(400);
+        }
     }
 
     /**
@@ -122,6 +157,8 @@ public class SocialMediaController {
      * @param ctx
      */
     private void getMessagesHandler(Context ctx) {
+        List<Message> msgs = socialMediaService.getAllMessages();
+        ctx.json(msgs);
     }
 
     /**
@@ -137,6 +174,17 @@ public class SocialMediaController {
      * @param ctx
      */
     private void getMessageByIdHandler(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("message_id"));
+            Message msg = socialMediaService.getMessageById(id);
+            if (msg != null) {
+                ctx.json(msg);
+            } else {
+                ctx.status(200);
+            }
+        } catch (Exception e) {
+            ctx.status(400).json("Invalid message ID");
+        }
     }
 
     /**
@@ -154,6 +202,17 @@ public class SocialMediaController {
      * @param ctx
      */
     private void deleteMessageByIdHandler(Context ctx) {
+        try {
+            int id = Integer.parseInt(ctx.pathParam("message_id"));
+            Message msg = socialMediaService.deleteMessageById(id);
+            if (msg != null) {
+                ctx.json(msg);
+            } else {
+                ctx.status(200);
+            }
+        } catch (Exception e) {
+            ctx.status(400).json("Invalid message ID");
+        }
     }
 
     /**
@@ -174,7 +233,18 @@ public class SocialMediaController {
      * 
      * @param ctx
      */
-    private void patchMessageByIdHandler(Context ctx) {
+    private void patchMessageByIdHandler(Context ctx) throws JsonProcessingException {
+        ObjectMapper om = new ObjectMapper();
+        Message msg = om.readValue(ctx.body(), Message.class);
+        int msg_id = Integer.parseInt(ctx.pathParam("message_id"));
+
+        Message updatedMsg = socialMediaService.updateMessage(msg_id, msg);
+
+        if (updatedMsg != null) {
+            ctx.json(updatedMsg);
+        } else {
+            ctx.status(400);
+        }
     }
 
     /**
@@ -189,6 +259,9 @@ public class SocialMediaController {
      * @param ctx
      */
     private void messagesByAccountIdHandler(Context ctx) {
+        int id = Integer.parseInt(ctx.pathParam("account_id"));
+        List<Message> msgs = socialMediaService.getMessagesByAccountId(id);
+        ctx.json(msgs);
     }
 
 }
